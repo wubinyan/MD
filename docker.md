@@ -1,3 +1,20 @@
+## Docker
+
+Docker 本身并没有定义或使用自己的`系统调用`。Docker 是一个容器化平台，它使用现有的操作系统功能来创建和管理容器。以下是一些与 Docker 相关的关键技术：
+
+* **Linux Namespaces**：Docker 在 Linux 上使用 namespaces 来隔离容器的进程、网络、用户和文件系统。这确保了容器之间的隔离和安全。
+
+* **Control Groups (cgroups)**：Docker 使用 cgroups 来限制和监控容器对系统资源（如 CPU、内存、磁盘 I/O 等）的使用。
+
+* **Overlay Filesystems**：Docker 使用叠加文件系统（如 Overlay2）来实现容器的文件系统。这允许容器共享一些读取的文件层，同时保持对写入操作的隔离。
+
+* **系统调用**：Docker 容器内的应用程序通过主机操作系统的正常系统调用与内核交互。这些系统调用由主机操作系统的内核处理，就像它们是在主机上直接运行的普通进程一样。
+
+* **安全限制**：Docker 可以使用如 AppArmor 或 SELinux 等安全模块来限制容器可以执行的系统调用，增强安全性。
+
+总的来说，Docker 利用了现有的操作系统技术和内核功能来实现容器化，而不是通过定义自己的系统调用。这使得 Docker 可以在不修改内核的情况下工作，并确保了与主机操作系统的兼容性和互操作性。
+
+
 ## Docker镜像标签
 
 Docker 镜像的标签通常由以下几部分构成：
@@ -27,6 +44,15 @@ docker build . -f ./examples/ex-1/Dockerfile -t rkrispin/vscode-python:ex1
 docker run -it --rm rkrispin/vscode-python:ex1 bash
 ```
 运行一个新的 Docker 容器，这个容器使用 rkrispin/vscode-python:ex1 镜像，当容器启动时，运行 bash 命令。容器运行在交互模式下，有一个伪终端，所以你可以在容器内输入命令并看到输出。当容器退出时，它会自动被删除
+
+#### 取出文件（例如.whl）
+
+```shell
+# 从镜像内取
+docker cp xgboost-builder:/tmp/xgboost/python-package/dist/*.whl/ .
+# 挂载宿主机目录
+docker run -it --rm -v /Users/dxm/Desktop/docker-python/centos7:/output xgboost-builder bash
+```
 
 #### Dockerfile
 
@@ -61,10 +87,18 @@ ARM64（也称为 arm64/v8）：ARM 架构的 64 位版本，它提供了更高�
 
 所以当我们说 Docker 镜像是跨平台的，我们是指在同一硬件架构的不同操作系统之间。而跨不同硬件架构需要构建针对特定硬件架构的镜像。这就是为什么 Docker 提供了 multi-architecture builds 功能，它允许您为多种硬件架构构建镜像
 
+*base镜像*: 这是一个最小化的CUDA基础镜像，只包含CUDA运行时库和必要的系统工具和库。
+它不包含编译CUDA代码所需的开发工具，如nvcc（NVIDIA CUDA编译器）。
+适用于运行已经编译好的CUDA应用程序，不需要进行任何CUDA开发或编译的场景。
+
+*devel镜像*: 包含了base镜像中的所有内容，此外还添加了CUDA开发工具，包括头文件、静态库以及nvcc。
+这个镜像允许您在容器内编译和开发CUDA应用程序。
+由于包含了额外的开发工具，所以这个镜像的大小通常比base镜像要大
+
 ```shell
-docker pull --platform linux/amd64 yanwubin/bmodel:v1.0
 docker build --no-cache --platform linux/amd64 -t yanwubin/bmodel:v1.0 .
 docker save yanwubin/bmodel:v1.0|gzip > bmodel_v1.0.tar.gz
+docker pull --platform linux/amd64 yanwubin/bmodel:v1.0
 ```
 
 ## Dockerfile:COPY  devcontainer:"context"
@@ -77,7 +111,7 @@ docker save yanwubin/bmodel:v1.0|gzip > bmodel_v1.0.tar.gz
 
 **ARG**: ARG 可以在构建Docker镜像时通过 --build-arg 选项来设置, 只在构建 Docker 镜像时可用
 
-**ENV**: 在 Dockerfile 中，ENV 指令用于设置环境变量。这些环境变量在*构建* Docker 镜像时被设置，并且在运行该 Docker 镜像的任何容器中都可用 
+**ENV**: 在 Dockerfile 中，ENV 指令用于设置环境变量。这些环境变量在**构建** Docker 镜像时被设置，并且在运行该 Docker 镜像的任何容器中都可用 
 
 **remoteEnv**: 在 devcontainer.json 文件中，remoteEnv 属性用于设置在开发容器中的环境变量。这些环境变量在开发容器*启动*时被设置，并且在容器中的任何位置可用
 
